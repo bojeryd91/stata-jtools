@@ -13,11 +13,13 @@ finish instead of freezing Stata.
 |-------------|------------|-------------------|
 | `jreshape`  | `reshape`  | `greshape`        |
 | `jcollapse` | `collapse` | `gcollapse`       |
+| `jmerge`    | `merge`    | –                 |
+| `jjoinby`   | `joinby`   | –                 |
 
 ## Installation
 
-Copy all `.ado` files, including the helper `_jbatches.ado` that both commands
-use, to your PERSONAL ado directory (type `sysdir` in Stata to find it), or to
+Copy all `.ado` files, including the helpers `_jbatches.ado` and
+`_jusing.ado` that the commands use, to your PERSONAL ado directory (type `sysdir` in Stata to find it), or to
 the working directory of your project.
 
 ## jreshape
@@ -118,6 +120,66 @@ jcollapse (mean) income (p50) med_income=income (count) n=income, ///
 - If an error occurs, the original data are restored as they were, as for
   `jreshape`. With `fast`, they are restored sorted by `by()` instead.
 
+## jmerge
+
+`jmerge` is a drop-in replacement for `merge` for 1:1, m:1 and 1:m merges.
+The master data are sorted by the key variables and split into batches that
+never split a key value. The using data are sorted and split into the same
+key ranges, so matching observations always meet in the same batch, and
+using observations without a match are kept exactly once. Each pair of
+batches is merged with `merge`.
+
+### Syntax
+
+```stata
+jmerge 1:1 varlist using filename [, options]
+jmerge m:1 varlist using filename [, options]
+jmerge 1:m varlist using filename [, options]
+```
+
+| Option               | Description                                              |
+|----------------------|----------------------------------------------------------|
+| `keepusing(varlist)` | Using variables to keep; only these and the keys are loaded |
+| `generate(newvar)`   | Name of the merge result variable (default `_merge`)     |
+| `nogenerate`         | Do not create the merge result variable                  |
+| `noreport`           | Do not display the summary table                         |
+| `nbatches(#)`        | Split the master data into about `#` batches             |
+| `batchsize(#)`       | Use master batches of about `#` observations             |
+| `fast`               | Do not restore the original row order on error           |
+
+Other `merge` options (`keep()`, `assert()`, `update`, `replace`, `nolabel`,
+`nonotes`, `force`) are passed on to `merge` for each batch.
+
+### Notes
+
+- Before merging, `jmerge` checks that the keys uniquely identify the
+  observations in the master data (1:1 and 1:m) and in the using data (1:1
+  and m:1), and stops with an error otherwise.
+- m:m merges are refused with an error. An m:m merge pairs observations within
+  each key value by their order in the data, which is rarely meaningful; to
+  form all pairwise combinations within each key value, use `joinby` or
+  `jjoinby`.
+- The using data are loaded in full once, to sort them, so the peak memory is
+  at least the size of the larger of the two datasets. `keepusing()` reduces
+  this by loading only the listed variables.
+- The result is sorted by the key variables. The summary table counts the
+  observations after `keep()`.
+- If an error occurs, the master data are restored as they were.
+
+## jjoinby
+
+`jjoinby` forms all pairwise combinations of master and using observations
+within each key value, as `joinby` does, using the same batching as `jmerge`.
+This helps most when the result is much larger than the inputs.
+
+```stata
+jjoinby varlist using filename [, nbatches(#) batchsize(#) fast joinby_options]
+```
+
+Unlike `joinby`, the key variables must be listed. `joinby`'s own options
+(`unmatched()`, `_merge()`, `update`, `replace`, `nolabel`) are passed on for
+each batch. The result is grouped by key range but not sorted.
+
 ## Benchmarks (jreshape)
 
 `run-benchmarks-jreshape.do` runs each method in a separate Stata batch process and
@@ -159,6 +221,7 @@ to remove. By default it keeps the summary results and the test datasets.
 - [x] Option to use built-in `reshape` even when `greshape` is installed, for
       features `greshape` does not support (`nogtools`)
 - [ ] Run the `jcollapse` benchmarks and add the results to this README
+- [ ] Run `test-jmerge.do`, then benchmark `jmerge` and `jjoinby`
 - [ ] `using` option, to read batches straight from a file on disk without
       first loading the whole dataset
 - [ ] Compare performance when running Stata/MP
@@ -166,7 +229,7 @@ to remove. By default it keeps the summary results and the test datasets.
       wide` with no arguments reverses a `jreshape`
 - [x] Restore the original sort order (not only the data) after an error
 - [ ] Order the columns of `jreshape wide` output as `reshape wide` does
-- [ ] Help files (`jreshape.sthlp`, `jcollapse.sthlp`)
+- [ ] Help files (`jreshape.sthlp`, `jcollapse.sthlp`, `jmerge.sthlp`, `jjoinby.sthlp`)
 - [ ] Package files (`stata.toc`, `jtools.pkg`) for `net install` from GitHub
 - [ ] More commands for large datasets
 - [ ] Check if scripts work with Stata versions < 17
