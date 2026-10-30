@@ -1,13 +1,14 @@
 # stata-jtools
 
-Stata tools for manipulating large datasets with limited memory.
+Stata tools for manipulating large datasets when the limiting resource is
+available working memory.
 
 Commands such as `reshape` can need several times the dataset's size in
 working memory. When that exceeds the RAM available, Stata stops with an
 out-of-memory error or slows to a crawl as the operating system swaps memory
 to disk, which can make Stata freeze. The commands in this repository process
-the data in pieces, so the extra memory needed stays bounded and large jobs
-finish instead of freezing Stata.
+the data in pieces (batches), so the extra memory needed stays bounded and 
+large jobs finish instead of freezing Stata.
 
 | Command     | Replaces   | Uses if installed |
 |-------------|------------|-------------------|
@@ -25,7 +26,7 @@ the working directory of your project.
 ## jreshape
 
 `jreshape` is a drop-in replacement for `reshape` that processes the data in
-batches. The data are saved to a temporary file, each batch is read back,
+batches. The data are saved to a temporary file, each batch is read back into working memory,
 reshaped and saved, and the reshaped batches are appended at the end. Only one
 batch is reshaped in memory at a time, so the working memory that `reshape`
 needs scales with the batch rather than the full dataset.
@@ -155,10 +156,10 @@ Other `merge` options (`keep()`, `assert()`, `update`, `replace`, `nolabel`,
 - Before merging, `jmerge` checks that the keys uniquely identify the
   observations in the master data (1:1 and 1:m) and in the using data (1:1
   and m:1), and stops with an error otherwise.
-- m:m merges are refused with an error. An m:m merge pairs observations within
+- It is intentional that m:m merges are refused with an error. An m:m merge pairs observations within
   each key value by their order in the data, which is rarely meaningful; to
   form all pairwise combinations within each key value, use `joinby` or
-  `jjoinby`.
+  `jjoinby`. See [Stata tip 142: joinby is the real merge m:m](https://journals.sagepub.com/doi/full/10.1177/1536867X211063416)
 - The using data are loaded in full once, to sort them, so the peak memory is
   at least the size of the larger of the two datasets. `keepusing()` reduces
   this by loading only the listed variables.
