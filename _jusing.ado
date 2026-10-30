@@ -1,4 +1,4 @@
-*! version 0.1.0  12oct2026  Jesper Böjeryd
+*! version 0.2.0  30oct2026  Jesper Böjeryd
 *! Copyright (c) 2026 Jesper Böjeryd. MIT License.
 *! Issues: https://github.com/bojeryd91/stata-jtools/issues
 /*
@@ -82,8 +82,8 @@ program define _jusing, rclass
 	* k markers up to and including marker k are dropped
 	local starts
 	if `nbounds' > 0 {
-		mata: st_local("starts", invtokens(strofreal(( ///
-			selectindex(st_data(., "`rank'") :== 0) - (1::`nbounds') :+ 1)', "%15.0f")))
+		mata: st_local("starts", invtokens(strofreal( ///
+			_jusing_starts("`rank'", `nbounds'), "%15.0f")))
 	}
 	qui drop if `rank' == 0
 	drop `rank'
@@ -92,4 +92,32 @@ program define _jusing, rclass
 
 	return local  edges "1 `starts' `=`nu' + 1'"
 	return scalar N = `nu'
+end
+
+* Mata function used above; dropped first so that reloading this file works
+version 17.0
+capture mata: mata drop _jusing_starts()
+mata:
+// Start rows of using batches 2, ..., nb+1 after the nb marker rows
+// (rank == 0) are dropped. Marker k at row p_k is followed by batch k+1,
+// which starts at row p_k - k + 1. The rank variable is read through a view
+// in chunks of 1 million rows, so it is never copied in full.
+real rowvector _jusing_starts(string scalar rankvar, real scalar nb)
+{
+	real scalar    N, a, b, chunk
+	real matrix    R
+	real colvector p, pos
+
+	N     = st_nobs()
+	chunk = 1e6
+	st_view(R, ., rankvar)
+	pos   = J(0, 1, .)
+	for (a = 1; a <= N; a = a + chunk) {
+		b = min((a + chunk - 1, N))
+		p = selectindex(R[|a, 1 \ b, 1|] :== 0)
+		if (rows(p)) pos = pos \ (p :+ (a - 1))
+	}
+	if (rows(pos) != nb) _error("unexpected number of boundary rows")
+	return((pos - (1::nb) :+ 1)')
+}
 end
