@@ -12,7 +12,8 @@ else if ("`method'" == "greshape")    greshape `dir' var, i(id) j(new)
 else if ("`method'" == "jreshape10")  jreshape `dir' var, i(id) j(new) nbatches(10)
 else if ("`method'" == "jreshape100") jreshape `dir' var, i(id) j(new) nbatches(100)
 
-* Reached only if everything above succeeded
+* Reached only if everything above succeeded. Create a file that the parent
+* process can check that it exists
 tempname ok
 file open `ok' using ok_jreshape_`dir'_`method'.txt, write replace
 file close `ok'

@@ -13,7 +13,8 @@ else if ("`method'" == "jcollapse10")  jcollapse `clist', by(g) nbatches(10)
 else if ("`method'" == "jcollapse100") jcollapse `clist', by(g) nbatches(100)
 else error 198   // unknown method
 
-* Reached only if everything above succeeded
+* Reached only if everything above succeeded. Create a file that the parent
+* process can check that it exists
 tempname ok
 file open `ok' using ok_jcollapse_`method'.txt, write replace
 file close `ok'
