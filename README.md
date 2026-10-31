@@ -3,12 +3,18 @@
 Stata tools for manipulating large datasets when the limiting resource is
 available working memory.
 
-Commands such as `reshape` can need several times the dataset's size in
+Commands such as `reshape long` can need several times the dataset's size in
 working memory. When that exceeds the RAM available, Stata stops with an
 out-of-memory error or slows to a crawl as the operating system swaps memory
 to disk, which can make Stata freeze. The commands in this repository process
 the data in pieces (batches), so the extra memory needed stays bounded and 
 large jobs finish instead of freezing Stata.
+
+When possible, commands use the corresponding gtools command to benefit from
+their speed compared to the built-in Stata command. While gtools commands are
+generally faster, they can use significantly more memory. jtools focuses on limiting
+the overhead working memory used, while, when possible, not compromise on execution time.
+
 
 | Command     | Replaces   | Uses if installed |
 |-------------|------------|-------------------|
@@ -70,6 +76,7 @@ jreshape wide var, i(id) j(year) batchsize(1000000)
   original row order. To allow this, `jreshape` stores each row's position in
   a temporary variable (4 bytes per row) before sorting. With `fast`, that
   variable is skipped and the data are restored sorted by `i()` instead.
+- jreshape wide is 
 - Requires Stata 17 or later (will probably work with earlier versions, but I only have 17 and later).
 - When `greshape` is installed, `jreshape` uses it for every batch and inherits
   its limitations. In particular, `greshape` does not implement `reshape`'s
@@ -189,16 +196,21 @@ is run 11 times; the table reports medians.
 
 - **Data:** 8,534,019 observations, `id` plus 20 numeric variables, reshaped
   `long` (about 170 million output rows).
-- **Machine:** [MacBook Pro, M3 Pro, 36GB], Stata/SE 17.
+- **Machine:** MacBook Pro, M3 Pro, 36GB, Stata/SE 17.
 - **Baseline:** Stata with the test data loaded and no reshape.
 
-| Method                    | Peak memory (GB) | Extra memory (GB) | Extra / baseline | Run time (s) | Run time / `reshape` |
-|---------------------------|-----------------:|------------------:|-----------------:|-------------:|-------------------:|
-| Baseline (load only)      | 0.818            | –                 | –                |   0.14       | –                  |
-| `reshape`                 | 3.22             | 2.40              | 2.93             | 127          | –                  |
-| `greshape`                | 6.71             | 5.89              | 7.20             |   6.17       | -0.95              |
-| `jreshape`, 10 batches    | 2.71             | 1.89              | 2.31             |  15.3        | -0.88              |
-| `jreshape`, 100 batches   | 2.62             | 1.80              | 2.20             |  26.8        | -0.79              |
+| Method                       | Peak memory (GB) | Extra memory (GB) | Extra / baseline | Run time (s) | Run time / `reshape` |
+|------------------------------|-----------------:|------------------:|-----------------:|-------------:|-------------------:|
+| Baseline (load wide dataset) | 0.818            | –                 | –                |   0.15       | –                  |
+| `reshape long`               | 3.22             | 2.40              | 2.93             | 127          | –                  |
+| `greshape long`              | 6.70             | 5.89              | 7.19             |   6.38       | -0.950             |
+| `jreshape long`, 10 batches  | 2.72             | 1.91              | 2.34             |  14.7        | -0.884             |
+| `jreshape long`, 100 batches | 2.59             | 1.77              | 2.17             |  26.4        | -0.792             |
+| Baseline (load long dataset) | 2.57             | –                 | –                |   1.01       | –                  |
+| `reshape wide`               | 2.57             | 7.4e-4            | 2.9e-4           | 195          | –                  |
+| `greshape wide`              | 10.9             | 8.35              | 3.25             |  16.1        | -0.917             |
+| `jreshape wide`, 10 batches  | 3.98             | 1.41              | 0.551            |  22.3        | -0.885             |
+| `jreshape wide`, 100 batches | 3.61             | 1.04              | 0.404            |  48.4        | -0.751             |
 
 *Extra memory* is the method's peak minus the baseline peak. *Extra / baseline*
 is extra memory as a multiple of the baseline peak. *Run time / `reshape`* is the
