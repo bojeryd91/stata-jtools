@@ -4,16 +4,18 @@ Stata tools for manipulating large datasets when the limiting resource is
 available working memory.
 
 Commands such as `reshape long` can need several times the dataset's size in
-working memory. When that exceeds the RAM available, Stata stops with an
-out-of-memory error or slows to a crawl as the operating system swaps memory
-to disk, which can make Stata freeze. The commands in this repository process
-the data in pieces (batches), so the extra memory needed stays bounded and 
-large jobs finish instead of freezing Stata.
+working memory. When that exceeds the RAM available, Stata stops slows to a crawl
+as the operating system swaps memory to disk, which can make Stata freeze. The
+commands in this repository process the data in pieces (batches), so the extra 
+memory needed stays bounded and large jobs finish instead of freezing Stata.
 
-When possible, commands use the corresponding gtools command to benefit from
+When possible, commands use the corresponding gtools commands to benefit from
 their speed compared to the built-in Stata command. While gtools commands are
 generally faster, they can use significantly more memory. jtools focuses on limiting
-the overhead working memory used, while, when possible, not compromise on execution time.
+the overhead working memory used, while, when possible, not compromise on execution
+time. There are cases when the built-in command outperforms the jtools version in
+terms of memory, but is still significantly slower: e.g., `reshape wide` has currently
+lower overhead than `jreshape wide`, but takes about 5 times longer to run (see below table).
 
 
 | Command     | Replaces   | Uses if installed |
